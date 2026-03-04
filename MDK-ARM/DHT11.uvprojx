@@ -677,6 +677,11 @@
               <FileType>1</FileType>
               <FilePath>..\APP\oled.c</FilePath>
             </File>
+            <File>
+              <FileName>uln2003.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\uln2003.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

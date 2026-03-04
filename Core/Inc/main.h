@@ -69,6 +69,14 @@ void Error_Handler(void);
 #define LIGHT_GPIO_Port GPIOB
 #define DHT11_Pin GPIO_PIN_5
 #define DHT11_GPIO_Port GPIOB
+#define ULN2003_IN1_Pin GPIO_PIN_6
+#define ULN2003_IN1_GPIO_Port GPIOB
+#define ULN2003_IN2_Pin GPIO_PIN_7
+#define ULN2003_IN2_GPIO_Port GPIOB
+#define ULN2003_IN3_Pin GPIO_PIN_8
+#define ULN2003_IN3_GPIO_Port GPIOB
+#define ULN2003_IN4_Pin GPIO_PIN_9
+#define ULN2003_IN4_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

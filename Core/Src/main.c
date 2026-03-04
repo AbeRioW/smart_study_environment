@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "dht11.h"
 #include "oled.h"
+#include "uln2003.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,6 +39,8 @@
 #define NOISE_THRESHOLD     1000
 #define LIGHT_THRESHOLD     300
 #define MQ5_THRESHOLD       2000
+#define HUMIDITY_THRESHOLD  90
+#define TEMP_THRESHOLD      20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,7 +62,34 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// 简单步进电机测试 - 4拍驱动
+const uint8_t motor_seq[4] = {0x01, 0x02, 0x04, 0x08}; // IN1, IN2, IN3, IN4
 
+void Stepper_Test(void)
+{
+    // 转30度，约170步 (28BYJ-48: 4096步/圈)
+    uint16_t steps = 170;
+    uint8_t i, j;
+    
+    for(i = 0; i < steps; i++)
+    {
+        for(j = 0; j < 4; j++)
+        {
+            uint8_t val = motor_seq[j];
+            HAL_GPIO_WritePin(ULN2003_IN1_GPIO_Port, ULN2003_IN1_Pin, (val & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(ULN2003_IN2_GPIO_Port, ULN2003_IN2_Pin, (val & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(ULN2003_IN3_GPIO_Port, ULN2003_IN3_Pin, (val & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(ULN2003_IN4_GPIO_Port, ULN2003_IN4_Pin, (val & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_Delay(15); // 15ms延时
+        }
+    }
+    
+    // 停止
+    HAL_GPIO_WritePin(ULN2003_IN1_GPIO_Port, ULN2003_IN1_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(ULN2003_IN2_GPIO_Port, ULN2003_IN2_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(ULN2003_IN3_GPIO_Port, ULN2003_IN3_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(ULN2003_IN4_GPIO_Port, ULN2003_IN4_Pin, GPIO_PIN_RESET);
+}
 /* USER CODE END 0 */
 
 /**
@@ -105,6 +135,9 @@ DHT11_Data_t dht_data;
    OLED_ShowString(0, 16, (uint8_t*)"Noise:", 8, 1);
    OLED_ShowString(0, 24, (uint8_t*)"Light:", 8, 1);
    OLED_Refresh();
+   
+   // ULN2003_Init(); // 暂时注释掉，使用简单测试函数
+   // ULN2003_SetSpeed(ULN2003_SPEED_SLOW);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -129,6 +162,17 @@ DHT11_Data_t dht_data;
 			OLED_ShowChar(90, 0, '.', 8, 1);
 			OLED_ShowNum(95, 0, dht_data.temp_dec, 1, 8, 1);
 			OLED_ShowChar(103, 0, 'C', 8, 1);
+			
+			if(dht_data.humidity_int > HUMIDITY_THRESHOLD)
+			{
+				HAL_UART_Transmit(&huart2, (uint8_t*)"Humidity Too High\r\n", 19, 100);
+				Stepper_Test(); // 步进电机转动30度
+			}
+			
+			if(dht_data.temp_int > TEMP_THRESHOLD)
+			{
+				HAL_UART_Transmit(&huart2, (uint8_t*)"Temperature Too High\r\n", 22, 100);
+			}
 		}
 		
 		ADC_Read_All(&mq5_value, &noise_value, &light_value);

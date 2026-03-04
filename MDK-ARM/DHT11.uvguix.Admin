@@ -6,7 +6,7 @@
   <Header>### uVision Project, (C) Keil Software</Header>
 
   <PrjGuiSettings>
-    <LastAddFilePath></LastAddFilePath>
+    <LastAddFilePath>C:\Users\Admin\Desktop\0304\smart_study_environment\APP</LastAddFilePath>
   </PrjGuiSettings>
 
   <ViewPool/>
@@ -1865,9 +1865,9 @@
       <ActiveTab>0</ActiveTab>
       <Doc>
         <Name>../Core/Src/main.c</Name>
-        <ColumnNumber>25</ColumnNumber>
-        <TopLine>1</TopLine>
-        <CurrentLine>32</CurrentLine>
+        <ColumnNumber>30</ColumnNumber>
+        <TopLine>28</TopLine>
+        <CurrentLine>43</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>

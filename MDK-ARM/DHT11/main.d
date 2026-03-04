@@ -35,3 +35,4 @@ dht11\main.o: ../APP/dht11.h
 dht11\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 dht11\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 dht11\main.o: ../APP/oled.h
+dht11\main.o: ../APP/uln2003.h
