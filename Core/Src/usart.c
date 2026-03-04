@@ -19,9 +19,24 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "main.h"
 
 /* USER CODE BEGIN 0 */
 #include "stdio.h"
+#include "string.h"
+
+// USART2中断接收变量
+uint8_t rx_data = 0;
+uint8_t rx_buffer[100] = {0}; // 增大缓冲区到100字节
+uint8_t rx_index = 0;
+uint32_t last_rx_time = 0; // 上次接收时间戳
+#define RX_TIMEOUT_MS 1000 // 接收超时时间
+
+// 步进电机标志
+extern uint8_t stepper_flag;
+
+// 外部函数声明
+extern void Stepper_Test(void);
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -81,10 +96,91 @@ void MX_USART2_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-
+  // 启动USART2中断接收
+  HAL_UART_Receive_IT(&huart2, &rx_data, 1);
   /* USER CODE END USART2_Init 2 */
 
 }
+
+/* USER CODE BEGIN 1 */
+// USART2中断回调函数
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == USART2)
+  {
+    // 更新接收时间戳
+    last_rx_time = HAL_GetTick();
+    
+    // 接收到数据
+    if(rx_data == '\n' || rx_data == '\r')
+    {
+      // 字符串结束，处理命令
+      rx_buffer[rx_index] = '\0';
+      
+      // 检查是否是蓝牙连接信息
+      if(strstr((char*)rx_buffer, "ble") || strstr((char*)rx_buffer, "BLE") || 
+         strstr((char*)rx_buffer, "connect") || strstr((char*)rx_buffer, "Connect"))
+      {
+        // 忽略蓝牙连接信息
+        printf("DEBUG: Bluetooth connection message received: %s\r\n", rx_buffer);
+      }
+      // 检查命令 - 不区分大小写
+      else if(strstr((char*)rx_buffer, "LAY ON") || strstr((char*)rx_buffer, "lay on"))
+      {
+        // 拉高LAY，打开继电器
+        HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_SET);
+        HAL_UART_Transmit(&huart2, (uint8_t*)"LAY ON\r\n", 7, 100);
+        printf("DEBUG: Received 'lay on' command, relay turned on\r\n");
+      }
+      else if(strstr((char*)rx_buffer, "LAY OFF") || strstr((char*)rx_buffer, "lay off"))
+      {
+        // 拉低LAY，关闭继电器
+        HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET);
+        HAL_UART_Transmit(&huart2, (uint8_t*)"LAY OFF\r\n", 8, 100);
+        printf("DEBUG: Received 'lay off' command, relay turned off\r\n");
+      }
+      else if(strstr((char*)rx_buffer, "ULN ON") || strstr((char*)rx_buffer, "uln on"))
+      {
+        // 发送响应
+        HAL_UART_Transmit(&huart2, (uint8_t*)"ULN ON\r\n", 7, 100);
+        printf("DEBUG: Received 'uln on' command, setting stepper flag\r\n");
+        // 设置步进电机标志，在main函数中执行
+        stepper_flag = 1;
+      }
+      else if(rx_index > 0)
+      {
+        // 回显接收到的命令
+        HAL_UART_Transmit(&huart2, (uint8_t*)"Received: ", 9, 100);
+        HAL_UART_Transmit(&huart2, rx_buffer, rx_index, 100);
+        HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 100);
+        printf("DEBUG: Received unknown command: %s\r\n", rx_buffer);
+      }
+      
+      // 重置缓冲区
+      rx_index = 0;
+      memset(rx_buffer, 0, sizeof(rx_buffer));
+    }
+    else
+    {
+      // 继续接收数据
+      if(rx_index < sizeof(rx_buffer) - 1)
+      {
+        rx_buffer[rx_index++] = rx_data;
+      }
+      else
+      {
+        // 缓冲区满，重置
+        printf("DEBUG: Buffer full, resetting\r\n");
+        rx_index = 0;
+        memset(rx_buffer, 0, sizeof(rx_buffer));
+      }
+    }
+    
+    // 重新启动中断接收
+    HAL_UART_Receive_IT(&huart2, &rx_data, 1);
+  }
+}
+/* USER CODE END 1 */
 
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {

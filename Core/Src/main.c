@@ -36,7 +36,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define NOISE_THRESHOLD     1000
+#define NOISE_THRESHOLD     2000
 #define LIGHT_THRESHOLD     300
 #define MQ5_THRESHOLD       2000
 #define HUMIDITY_THRESHOLD  90
@@ -65,11 +65,23 @@ void SystemClock_Config(void);
 // 简单步进电机测试 - 4拍驱动
 const uint8_t motor_seq[4] = {0x01, 0x02, 0x04, 0x08}; // IN1, IN2, IN3, IN4
 
+// 步进电机标志
+uint8_t stepper_flag = 0;
+
+// USART2中断接收变量
+extern uint8_t rx_data;
+extern uint8_t rx_index;
+extern uint8_t rx_buffer[];
+extern uint32_t last_rx_time;
+#define RX_TIMEOUT_MS 1000
+
 void Stepper_Test(void)
 {
     // 转30度，约170步 (28BYJ-48: 4096步/圈)
     uint16_t steps = 170;
     uint8_t i, j;
+    
+    printf("DEBUG: Stepper motor start\r\n");
     
     for(i = 0; i < steps; i++)
     {
@@ -80,7 +92,10 @@ void Stepper_Test(void)
             HAL_GPIO_WritePin(ULN2003_IN2_GPIO_Port, ULN2003_IN2_Pin, (val & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
             HAL_GPIO_WritePin(ULN2003_IN3_GPIO_Port, ULN2003_IN3_Pin, (val & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
             HAL_GPIO_WritePin(ULN2003_IN4_GPIO_Port, ULN2003_IN4_Pin, (val & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            HAL_Delay(15); // 15ms延时
+            
+            // 使用非阻塞延时
+            uint32_t start = HAL_GetTick();
+            while(HAL_GetTick() - start < 15);
         }
     }
     
@@ -89,6 +104,8 @@ void Stepper_Test(void)
     HAL_GPIO_WritePin(ULN2003_IN2_GPIO_Port, ULN2003_IN2_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(ULN2003_IN3_GPIO_Port, ULN2003_IN3_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(ULN2003_IN4_GPIO_Port, ULN2003_IN4_Pin, GPIO_PIN_RESET);
+    
+    printf("DEBUG: Stepper motor stop\r\n");
 }
 /* USER CODE END 0 */
 
@@ -139,6 +156,9 @@ DHT11_Data_t dht_data;
    // 初始化LAY引脚为低电平
    HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET);
    
+   // 测试USART2发送
+   HAL_UART_Transmit(&huart2, (uint8_t*)"USART2 Ready\r\n", 13, 100);
+   
    // ULN2003_Init(); // 暂时注释掉，使用简单测试函数
    // ULN2003_SetSpeed(ULN2003_SPEED_SLOW);
   /* USER CODE END 2 */
@@ -156,6 +176,14 @@ DHT11_Data_t dht_data;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		// 检查串口接收超时
+		if(rx_index > 0 && (HAL_GetTick() - last_rx_time) > RX_TIMEOUT_MS)
+		{
+			printf("DEBUG: RX timeout, resetting buffer\r\n");
+			rx_index = 0;
+			// 直接重置索引，usart.c 会处理缓冲区
+		}
+		
 		dht11_ok = (DHT11_READ_DATA(&dht_data) == 0);
 		
 		if(dht11_ok)
@@ -229,6 +257,13 @@ DHT11_Data_t dht_data;
 		if(light_value < LIGHT_THRESHOLD)
 		{
 			HAL_UART_Transmit(&huart2, (uint8_t*)"Light Too Strong\r\n", 18, 100);
+		}
+		
+		// 检查步进电机标志
+		if(stepper_flag)
+		{
+			Stepper_Test();
+			stepper_flag = 0;
 		}
 		
 		HAL_Delay(2000);

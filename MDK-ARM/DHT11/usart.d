@@ -30,3 +30,4 @@ dht11\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 dht11\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 dht11\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 dht11\usart.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+dht11\usart.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
