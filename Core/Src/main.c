@@ -35,7 +35,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define NOISE_THRESHOLD     1000
+#define LIGHT_THRESHOLD     300
+#define MQ5_THRESHOLD       2000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -91,31 +93,38 @@ DHT11_Data_t dht_data;
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_ADC1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
    printf("go\r\n");
    OLED_Init();
    OLED_Clear();
+   
+   OLED_ShowString(0, 0, (uint8_t*)"H:", 8, 1);
+   OLED_ShowString(65, 0, (uint8_t*)"T:", 8, 1);
+   OLED_ShowString(0, 8, (uint8_t*)"MQ5:", 8, 1);
+   OLED_ShowString(0, 16, (uint8_t*)"Noise:", 8, 1);
+   OLED_ShowString(0, 24, (uint8_t*)"Light:", 8, 1);
+   OLED_Refresh();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint16_t mq5_value, noise_value, light_value;
+  uint8_t dht11_ok = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		OLED_Clear();
+		dht11_ok = (DHT11_READ_DATA(&dht_data) == 0);
 		
-		if(DHT11_READ_DATA(&dht_data) == 0)
+		if(dht11_ok)
 		{
-			OLED_ShowString(0, 0, (uint8_t*)"H:", 8, 1);
 			OLED_ShowNum(10, 0, dht_data.humidity_int, 2, 8, 1);
 			OLED_ShowChar(25, 0, '.', 8, 1);
 			OLED_ShowNum(30, 0, dht_data.humidity_dec, 1, 8, 1);
 			OLED_ShowChar(38, 0, '%', 8, 1);
 			
-			OLED_ShowString(65, 0, (uint8_t*)"T:", 8, 1);
 			OLED_ShowNum(75, 0, dht_data.temp_int, 2, 8, 1);
 			OLED_ShowChar(90, 0, '.', 8, 1);
 			OLED_ShowNum(95, 0, dht_data.temp_dec, 1, 8, 1);
@@ -124,16 +133,26 @@ DHT11_Data_t dht_data;
 		
 		ADC_Read_All(&mq5_value, &noise_value, &light_value);
 		
-		OLED_ShowString(0, 8, (uint8_t*)"MQ5:", 8, 1);
 		OLED_ShowNum(30, 8, mq5_value, 4, 8, 1);
-		
-		OLED_ShowString(0, 16, (uint8_t*)"Noise:", 8, 1);
 		OLED_ShowNum(40, 16, noise_value, 4, 8, 1);
-		
-		OLED_ShowString(0, 24, (uint8_t*)"Light:", 8, 1);
 		OLED_ShowNum(40, 24, light_value, 4, 8, 1);
 		
 		OLED_Refresh();
+		
+		if(noise_value > NOISE_THRESHOLD)
+		{
+			HAL_UART_Transmit(&huart2, (uint8_t*)"Noise High\r\n", 12, 100);
+		}
+		
+		if(mq5_value > MQ5_THRESHOLD)
+		{
+			HAL_UART_Transmit(&huart2, (uint8_t*)"Air Quality Poor\r\n", 18, 100);
+		}
+		
+		if(light_value < LIGHT_THRESHOLD)
+		{
+			HAL_UART_Transmit(&huart2, (uint8_t*)"Light Too Strong\r\n", 18, 100);
+		}
 		
 		HAL_Delay(2000);
   }
