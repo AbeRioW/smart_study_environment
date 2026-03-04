@@ -136,6 +136,9 @@ DHT11_Data_t dht_data;
    OLED_ShowString(0, 24, (uint8_t*)"Light:", 8, 1);
    OLED_Refresh();
    
+   // 初始化LAY引脚为低电平
+   HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET);
+   
    // ULN2003_Init(); // 暂时注释掉，使用简单测试函数
    // ULN2003_SetSpeed(ULN2003_SPEED_SLOW);
   /* USER CODE END 2 */
@@ -183,6 +186,11 @@ DHT11_Data_t dht_data;
 			if(dht_data.temp_int > TEMP_THRESHOLD)
 			{
 				HAL_UART_Transmit(&huart2, (uint8_t*)"Temperature Too High\r\n", 22, 100);
+				HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_SET); // 拉高LAY，驱动继电器
+			}
+			else
+			{
+				HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET); // 拉低LAY，关闭继电器
 			}
 		}
 		

@@ -73,6 +73,8 @@ void Error_Handler(void);
 #define NOISE_GPIO_Port GPIOB
 #define LIGHT_Pin GPIO_PIN_1
 #define LIGHT_GPIO_Port GPIOB
+#define LAY_Pin GPIO_PIN_8
+#define LAY_GPIO_Port GPIOA
 #define DHT11_Pin GPIO_PIN_5
 #define DHT11_GPIO_Port GPIOB
 #define ULN2003_IN1_Pin GPIO_PIN_6
