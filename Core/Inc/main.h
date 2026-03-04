@@ -61,6 +61,12 @@ void Error_Handler(void);
 #define OLED_SCL_GPIO_Port GPIOC
 #define OLED_SDA_Pin GPIO_PIN_14
 #define OLED_SDA_GPIO_Port GPIOC
+#define LED_B_Pin GPIO_PIN_4
+#define LED_B_GPIO_Port GPIOA
+#define LED_G_Pin GPIO_PIN_5
+#define LED_G_GPIO_Port GPIOA
+#define LED_R_Pin GPIO_PIN_6
+#define LED_R_GPIO_Port GPIOA
 #define MQ5_Pin GPIO_PIN_7
 #define MQ5_GPIO_Port GPIOA
 #define NOISE_Pin GPIO_PIN_0

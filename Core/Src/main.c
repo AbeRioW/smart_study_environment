@@ -144,6 +144,10 @@ DHT11_Data_t dht_data;
   /* USER CODE BEGIN WHILE */
   uint16_t mq5_value, noise_value, light_value;
   uint8_t dht11_ok = 0;
+  static uint8_t humidity_over = 0;  // 湿度超过阈值标志
+  static uint8_t noise_over = 0;     // 噪音超过阈值标志
+  static uint8_t mq5_over = 0;       // MQ5超过阈值标志
+  
   while (1)
   {
     /* USER CODE END WHILE */
@@ -167,6 +171,13 @@ DHT11_Data_t dht_data;
 			{
 				HAL_UART_Transmit(&huart2, (uint8_t*)"Humidity Too High\r\n", 19, 100);
 				Stepper_Test(); // 步进电机转动30度
+				HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET); // 点亮LED_R (低电平)
+				humidity_over = 1;  // 标记已超阈值
+			}
+			else if(humidity_over)  // 湿度小于等于阈值且之前超过过
+			{
+				HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // 熄灭LED_R (高电平)
+				humidity_over = 0;  // 清除标志，下次超阈值才能再次点亮
 			}
 			
 			if(dht_data.temp_int > TEMP_THRESHOLD)
@@ -186,11 +197,25 @@ DHT11_Data_t dht_data;
 		if(noise_value > NOISE_THRESHOLD)
 		{
 			HAL_UART_Transmit(&huart2, (uint8_t*)"Noise High\r\n", 12, 100);
+			HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET); // 点亮LED_B (低电平)
+			noise_over = 1;  // 标记已超阈值
+		}
+		else if(noise_over)  // 噪音小于等于阈值且之前超过过
+		{
+			HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET); // 熄灭LED_B (高电平)
+			noise_over = 0;  // 清除标志
 		}
 		
 		if(mq5_value > MQ5_THRESHOLD)
 		{
 			HAL_UART_Transmit(&huart2, (uint8_t*)"Air Quality Poor\r\n", 18, 100);
+			HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // 点亮LED_G (低电平)
+			mq5_over = 1;  // 标记已超阈值
+		}
+		else if(mq5_over)  // MQ5小于等于阈值且之前超过过
+		{
+			HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // 熄灭LED_G (高电平)
+			mq5_over = 0;  // 清除标志
 		}
 		
 		if(light_value < LIGHT_THRESHOLD)
