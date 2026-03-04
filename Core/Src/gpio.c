@@ -74,6 +74,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : KEY1_Pin KEY2_Pin KEY3_Pin */
+  GPIO_InitStruct.Pin = KEY1_Pin|KEY2_Pin|KEY3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LAY_Pin */
   GPIO_InitStruct.Pin = LAY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -90,8 +96,45 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 2 */
+// 外部变量声明
+extern volatile uint8_t key1_pressed;
+extern volatile uint8_t key2_pressed;
+extern volatile uint8_t key3_pressed;
+extern volatile uint32_t key_debounce_time;
+extern uint8_t setting_mode;
+#define KEY_DEBOUNCE_MS 200
 
+// GPIO外部中断回调函数
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    uint32_t current_time = HAL_GetTick();
+    
+    // 消抖检查
+    if((current_time - key_debounce_time) < KEY_DEBOUNCE_MS)
+    {
+        return;
+    }
+    key_debounce_time = current_time;
+    
+    // 根据按键设置标志
+    if(GPIO_Pin == KEY1_Pin)
+    {
+        key1_pressed = 1;
+    }
+    else if(GPIO_Pin == KEY2_Pin)
+    {
+        key2_pressed = 1;
+    }
+    else if(GPIO_Pin == KEY3_Pin)
+    {
+        key3_pressed = 1;
+    }
+}
 /* USER CODE END 2 */
