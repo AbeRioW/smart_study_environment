@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -495,6 +496,7 @@ DHT11_Data_t dht_data;
   MX_USART1_UART_Init();
   MX_ADC1_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
    printf("go\r\n");
    OLED_Init();
@@ -509,6 +511,13 @@ DHT11_Data_t dht_data;
    
    // 初始化LAY引脚为低电平
    HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET);
+   
+   // 拉高LED_G和LED_B，不再使用
+   HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+   HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
+   
+   // 启动TIM3 PWM输出
+   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
    
    // 测试USART2发送
    HAL_UART_Transmit(&huart2, (uint8_t*)"USART2 Ready\r\n", 13, 100);
@@ -562,77 +571,82 @@ DHT11_Data_t dht_data;
 			dht11_ok = (DHT11_READ_DATA(&dht_data) == 0);
 			
 			if(dht11_ok)
-			{
-				OLED_ShowNum(10, 0, dht_data.humidity_int, 2, 8, 1);
-				OLED_ShowChar(25, 0, '.', 8, 1);
-				OLED_ShowNum(30, 0, dht_data.humidity_dec, 1, 8, 1);
-				OLED_ShowChar(38, 0, '%', 8, 1);
-				
-				OLED_ShowNum(75, 0, dht_data.temp_int, 2, 8, 1);
-				OLED_ShowChar(90, 0, '.', 8, 1);
-				OLED_ShowNum(95, 0, dht_data.temp_dec, 1, 8, 1);
-				OLED_ShowChar(103, 0, 'C', 8, 1);
-				
-				if(dht_data.humidity_int > humidity_threshold)
-				{
-					HAL_UART_Transmit(&huart2, (uint8_t*)"Humidity Too High\r\n", 19, 100);
-					Stepper_Test(); // 步进电机转动30度
-					HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET); // 点亮LED_R (低电平)
-					humidity_over = 1;  // 标记已超阈值
-				}
-				else if(humidity_over)  // 湿度小于等于阈值且之前超过过
-				{
-					HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // 熄灭LED_R (高电平)
-					humidity_over = 0;  // 清除标志，下次超阈值才能再次点亮
-				}
-				
-				if(dht_data.temp_int > temp_threshold)
-				{
-					HAL_UART_Transmit(&huart2, (uint8_t*)"Temperature Too High\r\n", 22, 100);
-					HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_SET); // 拉高LAY，驱动继电器
-				}
-				else
-				{
-					HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET); // 拉低LAY，关闭继电器
-				}
-			}
-			
-			ADC_Read_All(&mq5_value, &noise_value, &light_value);
-			
-			OLED_ShowNum(30, 8, mq5_value, 4, 8, 1);
-			OLED_ShowNum(40, 16, noise_value, 4, 8, 1);
-			OLED_ShowNum(40, 24, light_value, 4, 8, 1);
-			
-			OLED_Refresh();
-			
-			if(noise_value > noise_threshold)
-			{
-				HAL_UART_Transmit(&huart2, (uint8_t*)"Noise High\r\n", 12, 100);
-				HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET); // 点亮LED_B (低电平)
-				noise_over = 1;  // 标记已超阈值
-			}
-			else if(noise_over)  // 噪音小于等于阈值且之前超过过
-			{
-				HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET); // 熄灭LED_B (高电平)
-				noise_over = 0;  // 清除标志
-			}
-			
-			if(mq5_value > mq5_threshold)
-			{
-				HAL_UART_Transmit(&huart2, (uint8_t*)"Air Quality Poor\r\n", 18, 100);
-				HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // 点亮LED_G (低电平)
-				mq5_over = 1;  // 标记已超阈值
-			}
-			else if(mq5_over)  // MQ5小于等于阈值且之前超过过
-			{
-				HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // 熄灭LED_G (高电平)
-				mq5_over = 0;  // 清除标志
-			}
-			
-			if(light_value < light_threshold)
-			{
-				HAL_UART_Transmit(&huart2, (uint8_t*)"Light Too Strong\r\n", 18, 100);
-			}
+{
+	OLED_ShowNum(10, 0, dht_data.humidity_int, 2, 8, 1);
+	OLED_ShowChar(25, 0, '.', 8, 1);
+	OLED_ShowNum(30, 0, dht_data.humidity_dec, 1, 8, 1);
+	OLED_ShowChar(38, 0, '%', 8, 1);
+	
+	OLED_ShowNum(75, 0, dht_data.temp_int, 2, 8, 1);
+	OLED_ShowChar(90, 0, '.', 8, 1);
+	OLED_ShowNum(95, 0, dht_data.temp_dec, 1, 8, 1);
+	OLED_ShowChar(103, 0, 'C', 8, 1);
+	
+	if(dht_data.humidity_int > humidity_threshold)
+	{
+		HAL_UART_Transmit(&huart2, (uint8_t*)"Humidity Too High\r\n", 19, 100);
+		Stepper_Test(); // 步进电机转动30度
+		// HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET); // 点亮LED_R (低电平) - 注释掉
+		humidity_over = 1;  // 标记已超阈值
+	}
+	else if(humidity_over)  // 湿度小于等于阈值且之前超过过
+	{
+		// HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // 熄灭LED_R (高电平) - 注释掉
+		humidity_over = 0;  // 清除标志，下次超阈值才能再次点亮
+	}
+	
+	if(dht_data.temp_int > temp_threshold)
+	{
+		HAL_UART_Transmit(&huart2, (uint8_t*)"Temperature Too High\r\n", 22, 100);
+		HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_SET); // 拉高LAY，驱动继电器
+	}
+	else
+	{
+		HAL_GPIO_WritePin(LAY_GPIO_Port, LAY_Pin, GPIO_PIN_RESET); // 拉低LAY，关闭继电器
+	}
+}
+
+ADC_Read_All(&mq5_value, &noise_value, &light_value);
+
+OLED_ShowNum(30, 8, mq5_value, 4, 8, 1);
+OLED_ShowNum(40, 16, noise_value, 4, 8, 1);
+OLED_ShowNum(40, 24, light_value, 4, 8, 1);
+
+OLED_Refresh();
+
+if(noise_value > noise_threshold)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t*)"Noise High\r\n", 12, 100);
+	// HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET); // 点亮LED_B (低电平) - 注释掉
+	noise_over = 1;  // 标记已超阈值
+}
+else if(noise_over)  // 噪音小于等于阈值且之前超过过
+{
+	// HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET); // 熄灭LED_B (高电平) - 注释掉
+	noise_over = 0;  // 清除标志
+}
+
+if(mq5_value > mq5_threshold)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t*)"Air Quality Poor\r\n", 18, 100);
+	// HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // 点亮LED_G (低电平) - 注释掉
+	mq5_over = 1;  // 标记已超阈值
+}
+else if(mq5_over)  // MQ5小于等于阈值且之前超过过
+{
+	// HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // 熄灭LED_G (高电平) - 注释掉
+	mq5_over = 0;  // 清除标志
+}
+
+// 根据光照亮度调节PWM输出，光照越亮，LED越暗
+// 光照值范围假设为0-4095，PWM占空比范围为0-999
+uint16_t pwm_value = 999 - (light_value * 999 / 4095);
+__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+
+if(light_value < light_threshold)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t*)"Light Too Strong\r\n", 18, 100);
+}
 		}
 		
 		// 检查步进电机标志
